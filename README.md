@@ -1,10 +1,8 @@
-# LaunchDarkly Conversion Experiment Runner
+# LaunchDarkly Funnel Experiment Runner
+This is likely not useful for you to copy and run! It's a script I created to run a highly specific funnel experiment, which contains three primary funnel steps and two secondary metrics to track along the way.
 
-## Instructions
-1. Install dependencies:
-    1. `pip install python-dotenv`
-    1. `pip install launchdarkly-server-sdk`
-    1. `pip install names`
-1. Rename `.env.example` to `.env`
-1. Modify `.env` to point to your LaunchDarkly environment and flag, and update the values for your desired conversion percentage and number of iterations
-1. Run `run_conversion_experiments.py`
+Feel free to peruse and reach out if you have questions on what I did and why :)
+
+For what it's worth, `.env.example` has exactly the values (except my SDK key) I used to get these results:
+![Probability Report](<Probability_report.png>)
+![Secondary Metrics](<Secondary_metrics.png>)

@@ -1,12 +1,13 @@
 from dotenv import load_dotenv #pip install python-dotenv
 import ldclient
 from ldclient.config import Config
+import json
 import names
 import os
 import random
 import time
 import uuid
-from utils.user_countries import random_country
+from utils.create_context import create_multi_context
 
 
 '''
@@ -16,40 +17,49 @@ load_dotenv()
 
 SDK_KEY = os.environ.get('SDK_KEY')
 FLAG_NAME = os.environ.get('FLAG_NAME')
-METRIC_NAME = os.environ.get('METRIC_NAME')
-TRUE_PERCENT_CONVERTED = os.environ.get('TRUE_PERCENT_CONVERTED')
-FALSE_PERCENT_CONVERTED = os.environ.get('FALSE_PERCENT_CONVERTED')
-NUMBER_OF_ITERATIONS = os.environ.get('NUMBER_OF_ITERATIONS')
+FUNNEL_METRIC_1 = os.environ.get('FUNNEL_METRIC_1')
+FUNNEL_METRIC_2 = os.environ.get('FUNNEL_METRIC_2')
+FUNNEL_METRIC_3 = os.environ.get('FUNNEL_METRIC_3')
+SECONDARY_CONVERSION_METRIC = os.environ.get('SECONDARY_CONVERSION_METRIC')
+SECONDARY_NUMERIC_METRIC = os.environ.get('SECONDARY_NUMERIC_METRIC')
+FUNNEL_1_PERCENT_CONVERTED = int(os.environ.get('FUNNEL_1_PERCENT_CONVERTED'))
+FUNNEL_2_PERCENT_CONVERTED = int(os.environ.get('FUNNEL_2_PERCENT_CONVERTED'))
+FUNNEL_3_TRUE_PERCENT_CONVERTED = int(os.environ.get('FUNNEL_3_TRUE_PERCENT_CONVERTED'))
+FUNNEL_3_FALSE_PERCENT_CONVERTED = int(os.environ.get('FUNNEL_3_FALSE_PERCENT_CONVERTED'))
+SECONDARY_CONVERSION_TRUE_PERCENT = int(os.environ.get('SECONDARY_CONVERSION_TRUE_PERCENT'))
+SECONDARY_CONVERSION_FALSE_PERCENT = int(os.environ.get('SECONDARY_CONVERSION_FALSE_PERCENT'))
+NUMBER_OF_ITERATIONS = int(os.environ.get('NUMBER_OF_ITERATIONS'))
 
 
 '''
 Initialize the LaunchDarkly SDK
 '''
 ldclient.set_config(Config(SDK_KEY))
-# ldclient.set_config(Config(SDK_KEY,events_uri="http://0.0.0.0:8080"))
-# The above is a relic from playing with Vector
 
 
 '''
-Construct and return a random user
+Create fake contexts for this data
 '''
-def random_ld_user():
-    first_name = names.get_first_name()
-    last_name = names.get_last_name()
-    plan = random.choice(["free", "silver", "gold"])
-    email = first_name + "." + last_name + random.choice(["@gmail.com", "@yahoo.com", "@hotmail.com"])
+def create_contexts():
+    num_contexts = NUMBER_OF_ITERATIONS
+    contexts_array = []
+    for i in range(num_contexts):
+        context = create_multi_context()
+        json.dumps(contexts_array.append(context))
+        with open('data/contexts.json', 'w') as f:
+            f.write(str(contexts_array))
 
-    user = {
-        "key": str(uuid.uuid4()),
-        "firstName": first_name,
-        "lastName": last_name,
-        "email": email,
-        "country": random_country(),
-        "custom": {
-          "plan": plan
-        }
-    }
-    return user
+'''
+Return the month duration they sign up for. Expecting most people to pick 12 months, with fewer on 24 or 36
+'''
+def calc_numeric_value():
+    value = random.randint(1, 100)
+    if value <= 43:
+        return 12
+    elif value <= 76:
+        return 24
+    else:
+        return 36
 
 
 '''
@@ -65,23 +75,45 @@ def conversion_chance(chance_number):
 
 
 '''
+Calculates whether the context will convert. If they do, executes the track call for that context.
+'''
+def execute_call_if_converted(metric, percent_chance, context):
+    context_name = context['user']['name']
+    if conversion_chance(int(percent_chance)):
+        ldclient.get().track(metric, context)
+        print(f"User {context_name} converted for {metric}")
+        return True
+    else:
+        print(f"User {context_name} did NOT convert for {metric}")
+        return False
+
+
+'''
 Evaluate the flags for randomly generated users, and make the track() calls to LaunchDarkly
 '''
 def callLD():
-    for i in range(int(NUMBER_OF_ITERATIONS)):
+    # Create the number of contexts you want to evaluate
+    create_contexts()
+    contexts = json.load(open("data/contexts.json"))
 
-        random_user = random_ld_user()
-        flag_variation = ldclient.get().variation(FLAG_NAME, random_user, False)
+    # Primary loop to evaluate flags and send track events
+    for i in contexts:
 
-        if flag_variation:
-            print("Executing " + str(flag_variation) + ": " + str(i+1) + "/" + NUMBER_OF_ITERATIONS)
-            if conversion_chance(int(TRUE_PERCENT_CONVERTED)):
-                ldclient.get().track(METRIC_NAME, random_user)
+        flag_variation = ldclient.get().variation(FLAG_NAME, i, False)
 
-        else:
-            print("Executing " + str(flag_variation) + ": " + str(i+1) + "/" + NUMBER_OF_ITERATIONS)
-            if conversion_chance(int(FALSE_PERCENT_CONVERTED)):
-                ldclient.get().track(METRIC_NAME, random_user)
+        # Execute metrics 1 and 2 at the same percentage chance, because those should be the same regardless of the interrupted flow
+        if execute_call_if_converted(FUNNEL_METRIC_1, FUNNEL_1_PERCENT_CONVERTED, i):
+            if execute_call_if_converted(FUNNEL_METRIC_2, FUNNEL_2_PERCENT_CONVERTED, i):
+                # Add a condition to check the flag now, to see if adding the extra step interrupts final conversion
+                if flag_variation:
+                    # Secondary metric only shows if the flag is true
+                    execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_TRUE_PERCENT, i)
+                    ldclient.get().track(SECONDARY_NUMERIC_METRIC, i, metric_value=calc_numeric_value())
+                    execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_TRUE_PERCENT_CONVERTED, i)
+                else:
+                    execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_FALSE_PERCENT, i)
+                    ldclient.get().track(SECONDARY_NUMERIC_METRIC, i, metric_value=calc_numeric_value())
+                    execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_FALSE_PERCENT_CONVERTED, i)
 
 
 '''
