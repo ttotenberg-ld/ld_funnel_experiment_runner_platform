@@ -1,6 +1,7 @@
 from dotenv import load_dotenv #pip install python-dotenv
 import ldclient
 from ldclient.config import Config
+from ldclient.context import Context
 import json
 import names
 import os
@@ -30,11 +31,12 @@ SECONDARY_CONVERSION_TRUE_PERCENT = int(os.environ.get('SECONDARY_CONVERSION_TRU
 SECONDARY_CONVERSION_FALSE_PERCENT = int(os.environ.get('SECONDARY_CONVERSION_FALSE_PERCENT'))
 NUMBER_OF_ITERATIONS = int(os.environ.get('NUMBER_OF_ITERATIONS'))
 
+print(f"SDK_KEY: {SDK_KEY}")
 
 '''
 Initialize the LaunchDarkly SDK
 '''
-ldclient.set_config(Config(SDK_KEY))
+ldclient.set_config(Config(SDK_KEY, private_attributes=["age"]))
 
 
 '''
@@ -78,7 +80,8 @@ def conversion_chance(chance_number):
 Calculates whether the context will convert. If they do, executes the track call for that context.
 '''
 def execute_call_if_converted(metric, percent_chance, context):
-    context_name = context['user']['name']
+    user_context = context.get_individual_context('user')
+    context_name = user_context.get('name')
     if conversion_chance(int(percent_chance)):
         ldclient.get().track(metric, context)
         print(f"User {context_name} converted for {metric}")
@@ -99,21 +102,21 @@ def callLD():
     # Primary loop to evaluate flags and send track events
     for i in contexts:
 
-        flag_variation = ldclient.get().variation(FLAG_NAME, i, False)
+        loop_context = Context.from_dict(i)
+        flag_variation = ldclient.get().variation(FLAG_NAME, loop_context, False)
 
         # Execute metrics 1 and 2 at the same percentage chance, because those should be the same regardless of the interrupted flow
-        if execute_call_if_converted(FUNNEL_METRIC_1, FUNNEL_1_PERCENT_CONVERTED, i):
-            if execute_call_if_converted(FUNNEL_METRIC_2, FUNNEL_2_PERCENT_CONVERTED, i):
+        if execute_call_if_converted(FUNNEL_METRIC_1, FUNNEL_1_PERCENT_CONVERTED, loop_context):
+            if execute_call_if_converted(FUNNEL_METRIC_2, FUNNEL_2_PERCENT_CONVERTED, loop_context):
                 # Add a condition to check the flag now, to see if adding the extra step interrupts final conversion
                 if flag_variation:
-                    # Secondary metric only shows if the flag is true
-                    execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_TRUE_PERCENT, i)
-                    ldclient.get().track(SECONDARY_NUMERIC_METRIC, i, metric_value=calc_numeric_value())
-                    execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_TRUE_PERCENT_CONVERTED, i)
+                    execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_TRUE_PERCENT, loop_context)
+                    ldclient.get().track(SECONDARY_NUMERIC_METRIC, loop_context, metric_value=calc_numeric_value())
+                    execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_TRUE_PERCENT_CONVERTED, loop_context)
                 else:
-                    execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_FALSE_PERCENT, i)
-                    ldclient.get().track(SECONDARY_NUMERIC_METRIC, i, metric_value=calc_numeric_value())
-                    execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_FALSE_PERCENT_CONVERTED, i)
+                    execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_FALSE_PERCENT, loop_context)
+                    ldclient.get().track(SECONDARY_NUMERIC_METRIC, loop_context, metric_value=calc_numeric_value())
+                    execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_FALSE_PERCENT_CONVERTED, loop_context)
 
 
 '''
