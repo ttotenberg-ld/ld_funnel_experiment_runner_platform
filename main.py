@@ -12,6 +12,11 @@ from utils.create_context import create_multi_context
 
 
 '''
+NOTE: This is currently set up specifically for the short E2E demo.
+'''
+print("NOTE FOR FUTURE TOM: THIS IS CURRENTLY SET UP FOR THE E2E DEMO AND IT MAY JUST BE EAISER TO CLONE THE REPO AGAIN")
+
+'''
 Get environment variables
 '''
 load_dotenv()
@@ -103,19 +108,17 @@ def callLD():
     for i in contexts:
 
         loop_context = Context.from_dict(i)
-        flag_variation = ldclient.get().variation(FLAG_NAME, loop_context, False)
+        flag_variation = ldclient.get().variation(FLAG_NAME, loop_context, 'unavailable')
+        print(f"Flag variation: {flag_variation}")
 
         # Execute metrics 1 and 2 at the same percentage chance, because those should be the same regardless of the interrupted flow
         if execute_call_if_converted(FUNNEL_METRIC_1, FUNNEL_1_PERCENT_CONVERTED, loop_context):
             if execute_call_if_converted(FUNNEL_METRIC_2, FUNNEL_2_PERCENT_CONVERTED, loop_context):
                 # Add a condition to check the flag now, to see if adding the extra step interrupts final conversion
-                if flag_variation:
+                if flag_variation == 'available':
                     execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_TRUE_PERCENT, loop_context)
-                    ldclient.get().track(SECONDARY_NUMERIC_METRIC, loop_context, metric_value=calc_numeric_value())
                     execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_TRUE_PERCENT_CONVERTED, loop_context)
                 else:
-                    execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_FALSE_PERCENT, loop_context)
-                    ldclient.get().track(SECONDARY_NUMERIC_METRIC, loop_context, metric_value=calc_numeric_value())
                     execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_FALSE_PERCENT_CONVERTED, loop_context)
 
 
