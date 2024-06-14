@@ -13,7 +13,7 @@ def create_user_context():
   plan = random.choice(['platinum', 'silver', 'gold', 'diamond'])
   role = random.choice(['reader', 'writer', 'admin'])
   metro = random.choice(['New York', 'Chicago', 'Minneapolis', 'Atlanta', 'Los Angeles', 'San Francisco', 'Denver', 'Boston'])
-  age = random.randint(20, 80)
+  net_worth = random.choice(['low', 'medium', 'high'])
 
   user_context = Context.builder(user_key) \
   .set("kind", "user") \
@@ -21,7 +21,7 @@ def create_user_context():
   .set("plan", plan) \
   .set("role", role) \
   .set("metro", metro) \
-  .set("age", age) \
+  .set("net_worth", net_worth) \
   .build()
 
   return user_context

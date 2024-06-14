@@ -12,49 +12,74 @@ from utils.create_context import create_multi_context
 
 
 '''
-NOTE: This is currently set up specifically for the short E2E demo.
-'''
-print("NOTE FOR FUTURE TOM: THIS IS CURRENTLY SET UP FOR THE E2E DEMO AND IT MAY JUST BE EAISER TO CLONE THE REPO AGAIN")
-
-'''
 Get environment variables
 '''
 load_dotenv()
 
 SDK_KEY = os.environ.get('SDK_KEY')
-FLAG_NAME = os.environ.get('FLAG_NAME')
-FUNNEL_METRIC_1 = os.environ.get('FUNNEL_METRIC_1')
-FUNNEL_METRIC_2 = os.environ.get('FUNNEL_METRIC_2')
-FUNNEL_METRIC_3 = os.environ.get('FUNNEL_METRIC_3')
-SECONDARY_CONVERSION_METRIC = os.environ.get('SECONDARY_CONVERSION_METRIC')
-SECONDARY_NUMERIC_METRIC = os.environ.get('SECONDARY_NUMERIC_METRIC')
-FUNNEL_1_PERCENT_CONVERTED = int(os.environ.get('FUNNEL_1_PERCENT_CONVERTED'))
-FUNNEL_2_PERCENT_CONVERTED = int(os.environ.get('FUNNEL_2_PERCENT_CONVERTED'))
-FUNNEL_3_TRUE_PERCENT_CONVERTED = int(os.environ.get('FUNNEL_3_TRUE_PERCENT_CONVERTED'))
-FUNNEL_3_FALSE_PERCENT_CONVERTED = int(os.environ.get('FUNNEL_3_FALSE_PERCENT_CONVERTED'))
-SECONDARY_CONVERSION_TRUE_PERCENT = int(os.environ.get('SECONDARY_CONVERSION_TRUE_PERCENT'))
-SECONDARY_CONVERSION_FALSE_PERCENT = int(os.environ.get('SECONDARY_CONVERSION_FALSE_PERCENT'))
 NUMBER_OF_ITERATIONS = int(os.environ.get('NUMBER_OF_ITERATIONS'))
 
-print(f"SDK_KEY: {SDK_KEY}")
+
+'''
+Experiment variables
+'''
+flag_key = "config-ai-model"
+funnel_metric_1 = "ai-analyze-clicked"
+funnel_metric_2 = "financial-advisor-contacted"
+ai_csat_positive_metric = "ai-csat-positive"
+ai_csat_negative_metric = "ai-csat-negative"
+ai_response_latency = "ai-response-latency"
+ai_cost = "ai-analysis-cost"
+
+
+'''
+Metrics logic
+'''
+funnel_metric_1_percent_converted = 30
+
+control_funnel_metric_2_percent_converted = 40
+control_ai_csat_positive_percent_converted = 30
+control_ai_csat_negative_percent_converted = 5
+control_ai_response_latency_range = [50, 175]
+control_ai_cost_range = [0.0020, 0.0040]
+
+
+t1_funnel_metric_2_percent_converted = 23
+t1_ai_csat_positive_percent_converted = 23
+t1_ai_csat_negative_percent_converted = 11
+t1_ai_response_latency_range = [65, 220]
+t1_ai_cost_range = [0.0120, 0.0150]
+
+
+t2_funnel_metric_2_percent_converted = 55
+t2_ai_csat_positive_percent_converted = 36
+t2_ai_csat_negative_percent_converted = 4
+t2_ai_response_latency_range = [72, 389]
+t2_ai_cost_range = [0.0015, 0.0025]
+
 
 '''
 Initialize the LaunchDarkly SDK
 '''
-ldclient.set_config(Config(SDK_KEY, private_attributes=["age"]))
+ldclient.set_config(Config(SDK_KEY))
 
 
 '''
-Create fake contexts for this data
+It's just fun :)
 '''
-def create_contexts():
-    num_contexts = NUMBER_OF_ITERATIONS
-    contexts_array = []
-    for i in range(num_contexts):
-        context = create_multi_context()
-        json.dumps(contexts_array.append(context))
-        with open('data/contexts.json', 'w') as f:
-            f.write(str(contexts_array))
+def show_banner():
+    print()
+    print("        ██       ")
+    print("          ██     ")
+    print("      ████████   ")
+    print("         ███████ ")
+    print("██ LAUNCHDARKLY █")
+    print("         ███████ ")
+    print("      ████████   ")
+    print("          ██     ")
+    print("        ██       ")
+    print()
+
 
 '''
 Return the month duration they sign up for. Expecting most people to pick 12 months, with fewer on 24 or 36
@@ -97,34 +122,84 @@ def execute_call_if_converted(metric, percent_chance, context):
 
 
 '''
+Calculates CSAT
+'''
+def calc_csat(positive_csat, negative_csat, context):
+    value = random.randint(1, 100)
+    if value <= positive_csat:
+        print("CSAT: Positive")
+        ldclient.get().track("ai-csat-positive", context)
+    elif value <= negative_csat:
+        print("CSAT: Negative")
+        ldclient.get().track("ai-csat-negative", context)
+    else:
+        print("CSAT: None")
+
+'''
 Evaluate the flags for randomly generated users, and make the track() calls to LaunchDarkly
 '''
 def callLD():
-    # Create the number of contexts you want to evaluate
-    create_contexts()
-    contexts = json.load(open("data/contexts.json"))
-
     # Primary loop to evaluate flags and send track events
-    for i in contexts:
+    for i in range(NUMBER_OF_ITERATIONS):
+        context = create_multi_context()
+        user_context = context.get_individual_context('user')
+        context_name = user_context.get('name')
+        print(f"USER: {context_name}")
 
-        loop_context = Context.from_dict(i)
-        flag_variation = ldclient.get().variation(FLAG_NAME, loop_context, 'unavailable')
-        print(f"Flag variation: {flag_variation}")
+        flag_detail = ldclient.get().variation_detail(flag_key, context, 'unavailable')
+        index = flag_detail.variation_index
 
-        # Execute metrics 1 and 2 at the same percentage chance, because those should be the same regardless of the interrupted flow
-        if execute_call_if_converted(FUNNEL_METRIC_1, FUNNEL_1_PERCENT_CONVERTED, loop_context):
-            if execute_call_if_converted(FUNNEL_METRIC_2, FUNNEL_2_PERCENT_CONVERTED, loop_context):
-                # Add a condition to check the flag now, to see if adding the extra step interrupts final conversion
-                if flag_variation == 'available':
-                    execute_call_if_converted(SECONDARY_CONVERSION_METRIC, SECONDARY_CONVERSION_TRUE_PERCENT, loop_context)
-                    execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_TRUE_PERCENT_CONVERTED, loop_context)
-                else:
-                    execute_call_if_converted(FUNNEL_METRIC_3, FUNNEL_3_FALSE_PERCENT_CONVERTED, loop_context)
+        # Execute funnel metric 1 at the same percentage chance, because that should be the same regardless of the model configuration
+        if execute_call_if_converted(funnel_metric_1, funnel_metric_1_percent_converted, context):      
+            if index == 0:
+                print("Serving Control")
+                # Track latency
+                latency = random.randint(control_ai_response_latency_range[0], control_ai_response_latency_range[1])
+                ldclient.get().track("ai-response-latency", context, metric_value=latency)
+                print(f"LATENCY: {latency}ms")
+                # Track cost
+                cost = random.uniform(control_ai_cost_range[0], control_ai_cost_range[1])
+                ldclient.get().track("ai-analysis-cost", context, metric_value=cost)
+                # Track CSAT
+                calc_csat(control_ai_csat_positive_percent_converted, control_ai_csat_negative_percent_converted, context)
+                # Track funnel metric 2 if they convert
+                execute_call_if_converted(funnel_metric_2, control_funnel_metric_2_percent_converted, context)
+
+            elif index == 1:
+                print("Serving Treatment 1")
+                # Track latency
+                latency = random.randint(t1_ai_response_latency_range[0], t1_ai_response_latency_range[1])
+                ldclient.get().track("ai-response-latency", context, metric_value=latency)
+                print(f"LATENCY: {latency}ms")
+                # Track cost
+                cost = random.uniform(t1_ai_cost_range[0], t1_ai_cost_range[1])
+                ldclient.get().track("ai-analysis-cost", context, metric_value=cost)
+                # Track CSAT
+                calc_csat(t1_ai_csat_positive_percent_converted, t1_ai_csat_negative_percent_converted, context)
+                # Track funnel metric 2 if they convert
+                execute_call_if_converted(funnel_metric_2, t1_funnel_metric_2_percent_converted, context)
+
+            elif index == 2:
+                print("Serving Treatment 2")
+                # Track latency
+                latency = random.randint(t2_ai_response_latency_range[0], t2_ai_response_latency_range[1])
+                ldclient.get().track("ai-response-latency", context, metric_value=latency)
+                print(f"LATENCY: {latency}ms")
+                # Track cost
+                cost = random.uniform(t2_ai_cost_range[0], t2_ai_cost_range[1])
+                ldclient.get().track("ai-analysis-cost", context, metric_value=cost)
+                # Track CSAT
+                calc_csat(t2_ai_csat_positive_percent_converted, t2_ai_csat_negative_percent_converted, context)
+                # Track funnel metric 2 if they convert
+                execute_call_if_converted(funnel_metric_2, t2_funnel_metric_2_percent_converted, context)
+            else:
+                pass
 
 
 '''
 Execute!
 '''
+show_banner()
 callLD()
 
 
