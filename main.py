@@ -21,7 +21,7 @@ NUMBER_OF_ITERATIONS = int(os.environ.get('NUMBER_OF_ITERATIONS'))
 
 
 '''
-Experiment variables
+Flag + experiment metrics
 '''
 flag_key = "config-ai-model"
 funnel_metric_1 = "ai-analyze-clicked"
@@ -81,22 +81,10 @@ def show_banner():
     print()
 
 
-'''
-Return the month duration they sign up for. Expecting most people to pick 12 months, with fewer on 24 or 36
-'''
-def calc_numeric_value():
-    value = random.randint(1, 100)
-    if value <= 43:
-        return 12
-    elif value <= 76:
-        return 24
-    else:
-        return 36
-
 
 '''
 Conversion true or false calculator.
-Pass in TRUE_PERCENT_CONVERTED or FALSE_PERCENT_CONVERTED, which refer to the true/false flag variation served
+Pass in the percent converted, which refers to the conversion chance for the flag variation served
 '''
 def conversion_chance(chance_number):
     chance_calc = random.randint(1, 100)
