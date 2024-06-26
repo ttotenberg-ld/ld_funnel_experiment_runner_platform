@@ -35,27 +35,27 @@ ai_cost = "ai-analysis-cost"
 '''
 Metrics logic
 '''
-funnel_metric_1_percent_converted = 30
+funnel_metric_1_percent_converted = 40
 
-control_funnel_metric_2_percent_converted = 40
-control_ai_csat_positive_percent_converted = 30
+control_funnel_metric_2_percent_converted = 64
+control_ai_csat_positive_percent_converted = 28
 control_ai_csat_negative_percent_converted = 5
-control_ai_response_latency_range = [50, 175]
-control_ai_cost_range = [0.0020, 0.0040]
+control_ai_response_latency_range = [500, 1750]
+control_ai_cost_range = [0.04, 0.06]
 
 
-t1_funnel_metric_2_percent_converted = 23
+t1_funnel_metric_2_percent_converted = 60
 t1_ai_csat_positive_percent_converted = 23
 t1_ai_csat_negative_percent_converted = 11
-t1_ai_response_latency_range = [65, 220]
-t1_ai_cost_range = [0.0120, 0.0150]
+t1_ai_response_latency_range = [650, 2200]
+t1_ai_cost_range = [0.04, 0.05]
 
 
-t2_funnel_metric_2_percent_converted = 55
-t2_ai_csat_positive_percent_converted = 36
-t2_ai_csat_negative_percent_converted = 4
-t2_ai_response_latency_range = [72, 389]
-t2_ai_cost_range = [0.0015, 0.0025]
+t2_funnel_metric_2_percent_converted = 77
+t2_ai_csat_positive_percent_converted = 41
+t2_ai_csat_negative_percent_converted = 3
+t2_ai_response_latency_range = [400, 1280]
+t2_ai_cost_range = [0.03, 0.04]
 
 
 '''
