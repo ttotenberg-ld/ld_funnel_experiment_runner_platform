@@ -1,0 +1,4 @@
+aws_region        = "us-east-2"
+unique_identifier = "coastexpgen"
+app_name          = "demo-exp-gen"
+owner             = "your-name@launchdarkly.com"
