@@ -1,10 +1,10 @@
 terraform {
-  # backend "s3" {
-  #   bucket         = "demo-expgen-state"
-  #   key            = "terraform.tfstate"
-  #   dynamodb_table = "demo-expgen-state"
-  #   region         = "us-east-2"
-  # }
+  backend "s3" {
+    bucket         = "demo-expgen-state"
+    key            = "terraform.tfstate"
+    dynamodb_table = "demo-expgen-state"
+    region         = "us-east-2"
+  }
 
   required_providers {
     aws = {
