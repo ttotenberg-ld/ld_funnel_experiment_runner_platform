@@ -3,3 +3,16 @@ __pycache__/
 .env
 .vscode
 venv
+
+*.tfstate*
+*.tfvars
+.terraform
+*.lock.hcl
+
+demoexpgen/*
+!demoexpgen/lambda_demoexpgen.zip
+!demoexpgen/main.py
+!demoexpgen/requirements.txt
+!demoexpgen/utils*
+!demoexpgen/data*
+
