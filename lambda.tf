@@ -4,6 +4,12 @@ data "archive_file" "demoexpgen_zip" {
   excludes         = ["${path.module}/demoexpgen/lambda_demoexpgen.zip"]
   output_file_mode = "0666"
   output_path      = "${path.module}/demoexpgen/lambda_demoexpgen.zip"
+
+  depends_on = [
+    null_resource.python_ldclient,
+    null_resource.python_ldsdk,
+    null_resource.python_names
+  ]
 }
 
 resource "aws_lambda_function" "lambda_demoexpgen" {
