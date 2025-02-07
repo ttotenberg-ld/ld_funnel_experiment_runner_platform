@@ -1,4 +1,4 @@
-launchdarkly_server_sdk==9.0.1
+launchdarkly_server_sdk==9.9.0
 ldclient==0.0.1
 names==0.3.0
 python-dotenv==1.0.0
